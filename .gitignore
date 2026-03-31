@@ -9,4 +9,10 @@ data/*
 !data/processed/.gitkeep
 *.egg-info/
 src/*.egg-info/
-
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+.DS_Store
+.streamlit/secrets.toml
+infra/terraform/terraform.tfvars

@@ -16,21 +16,26 @@ def normalize_text(text: str) -> str:
 
 
 def _split_text(text: str, max_chars: int, overlap_chars: int) -> List[str]:
-    """Split text with LangChain's sentence-aware character splitter."""
+    """Split text with LangChain's sentence-oriented recursive strategy."""
     normalized = normalize_text(text)
     if not normalized:
         return []
+    if max_chars <= 0:
+        raise ValueError("max_chars must be greater than zero.")
+    if overlap_chars < 0:
+        raise ValueError("overlap_chars must be zero or greater.")
 
     try:
-        from langchain_text_splitters import CharacterTextSplitter
+        from langchain_text_splitters import RecursiveCharacterTextSplitter
     except ImportError as exc:  # pragma: no cover - depends on external package
         raise RuntimeError(
             "langchain-text-splitters is not installed. Run `pip install -e .` inside a Python 3.11+ virtual environment."
         ) from exc
 
-    splitter = CharacterTextSplitter(
-        separator=r"(?<=[.!?])\s+",
-        is_separator_regex=True,
+    splitter = RecursiveCharacterTextSplitter(
+        separators=["\n\n", "\n", ". ", "? ", "! ", " ", ""],
+        is_separator_regex=False,
+        keep_separator=False,
         chunk_size=max_chars,
         chunk_overlap=overlap_chars,
     )
