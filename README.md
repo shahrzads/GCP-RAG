@@ -27,14 +27,30 @@ For a small interview dataset, the hardest part is usually not "semantic search 
 ```text
 .
 ├── .env.example
+├── .github
+│   └── workflows
+│       ├── ci.yml
+│       ├── deploy.yml
+│       └── terraform.yml
 ├── .gitignore
+├── .streamlit
+│   └── config.toml
+├── Dockerfile
 ├── data
 │   ├── processed
 │   │   └── .gitkeep
 │   └── source_documents.jsonl
 ├── docs
 │   ├── architecture.md
+│   ├── deployment.md
 │   └── first-iteration.md
+├── infra
+│   └── terraform
+│       ├── main.tf
+│       ├── outputs.tf
+│       ├── terraform.tfvars.example
+│       ├── variables.tf
+│       └── versions.tf
 ├── pyproject.toml
 ├── src
 │   └── gcp_rag_demo
@@ -64,6 +80,8 @@ For a small interview dataset, the hardest part is usually not "semantic search 
 
 - Python `3.11+`
 - `gcloud` CLI
+- `docker`
+- `terraform`
 - A Google Cloud project with billing enabled
 - Vertex AI API enabled
 - Cloud Storage API enabled
@@ -156,6 +174,13 @@ Run the simple upload-and-query UI with:
 streamlit run src/gcp_rag_demo/ui.py
 ```
 
+You can also run the same UI in a local container:
+
+```bash
+docker build -t gcp-rag-demo:local .
+docker run --rm -p 8080:8080 --env-file .env gcp-rag-demo:local
+```
+
 The UI currently:
 
 - accepts PDF uploads
@@ -191,9 +216,24 @@ You should be able to explain this flow clearly:
 - `Iteration 3`: wrap retrieval in a Cloud Run API
 - `Iteration 4`: add evaluation, prompt templates, and monitoring
 
+## CI/CD And Terraform
+
+This branch now includes:
+
+- `GitHub Actions` CI for Python test runs
+- `GitHub Actions` CD for Docker build, Artifact Registry push, and Cloud Run deploy
+- `Terraform` for the bucket, Artifact Registry repository, Cloud Run service, service accounts, and GitHub OIDC federation
+
+The exact bring-up steps live in [docs/deployment.md](docs/deployment.md). The short version is:
+
+1. Run local tests with `python -m pytest`.
+2. Build the Docker image locally with `docker build -t gcp-rag-demo:local .`.
+3. Apply `infra/terraform` after filling in `terraform.tfvars`.
+4. Copy the Terraform outputs into the GitHub Actions repository variables and secrets.
+5. Push directly to a branch or open a PR to `dev` to run CI, then merge the PR to `dev` to trigger deployment.
+
 ## Current Notes
 
-- The workspace currently has `python3` mapped to `3.7.3`, which is too old for a clean modern Vertex AI setup. The project files target Python `3.11+`.
 - The included unit tests cover chunking, serialization, Vector Search result mapping, and prompt-building logic only. They do not call Google Cloud services.
 - PDF support currently assumes text-based PDFs and does not perform OCR.
 
@@ -201,11 +241,3 @@ You should be able to explain this flow clearly:
 
 - Embeddings in this repo still use `google-cloud-aiplatform`.
 - Answer generation uses `google-genai`, which Google currently recommends for Gemini API usage on Vertex AI.
-
-## References
-
-- Vertex AI text embeddings: https://docs.cloud.google.com/vertex-ai/generative-ai/docs/embeddings/get-text-embeddings
-- Embedding task types: https://docs.cloud.google.com/vertex-ai/generative-ai/docs/embeddings/task-types
-- Vertex AI `TextEmbeddingInput` Python reference: https://docs.cloud.google.com/python/docs/reference/vertexai/latest/vertexai.language_models.TextEmbeddingInput
-- Vertex AI Vector Search overview: https://cloud.google.com/vertex-ai/docs/vector-search/overview
-- Deploying Vector Search indexes: https://docs.cloud.google.com/vertex-ai/docs/vector-search/deploy-index-public
